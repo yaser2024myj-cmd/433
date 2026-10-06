@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FNaF: Mafia Night</title>
+  <style>
+    :root {
+      --bg-color: #0b0c10;
+      --card-bg: #1f2833;
+      --text-color: #c5c6c7;
+      --accent-color: #66fcf1;
+      --danger-color: #ff4d4d;
+      --gold-color: #ffd700;
+      --purple-afton: #8a2be2;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 800px;
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.8);
+      border: 1px solid #333;
+    }
+
+    h1, h2, h3 {
+      text-align: center;
+      color: var(--accent-color);
+      margin-bottom: 15px;
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: #0b0c10;
+      color: #fff;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+
+    button {
+      background: var(--accent-color);
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    button.danger {
+      background: var(--danger-color);
+      color: #fff;
+    }
+
+    button.afton {
+      background: var(--purple-afton);
+      color: #fff;
+    }
+
+    .character-card {
+      border: 2px solid #444;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .character-card.selected {
+      border-color: var(--accent-color);
+      background: #112233;
+    }
+
+    .badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .badge.rare { background: var(--gold-color); color: #000; }
+    .badge.exotic { background: var(--purple-afton); color: #fff; }
+
+    .admin-panel {
+      border: 2px dashed var(--gold-color);
+      padding: 15px;
+      margin-top: 15px;
+      border-radius: 8px;
+      background: #2a2000;
+    }
+
+    .chat-box {
+      height: 150px;
+      border: 1px solid #444;
+      overflow-y: scroll;
+      padding: 10px;
+      background: #000;
+      margin-bottom: 10px;
+      border-radius: 6px;
+    }
+
+    .player-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 10px 0;
+    }
+
+    .player-item {
+      background: #111;
+      padding: 10px;
+      border-radius: 6px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- 1. شاشة تسجيل الدخول -->
+  <div id="auth-screen" class="screen active">
+    <h1>FNaF: مافيا الليالي</h1>
+    <h2>تسجيل الدخول / حساب جديد</h2>
+    <input type="text" id="username" placeholder="اسم المستخدم">
+    <input type="password" id="password" placeholder="كلمة المرور">
+    <button onclick="login()">تسجيل دخول</button>
+    <button onclick="register()">إنشاء حساب جديد</button>
+  </div>
+
+  <!-- 2. القائمة الرئيسية -->
+  <div id="main-menu" class="screen">
+    <h2>أهلاً بك <span id="user-display"></span> (مستوى: <span id="user-level">1</span>)</h2>
+    
+    <button onclick="showScreen('lobby-screen')">إنضمام / إنشاء روم</button>
+    <button onclick="showScreen('inventory-screen')">الشخصيات والبكجات</button>
+    <button onclick="showScreen('settings-screen')">الإعدادات</button>
+  </div>
+
+  <!-- 3. قائمة الشخصيات والبكجات -->
+  <div id="inventory-screen" class="screen">
+    <h2>شخصياتك المتاحة</h2>
+    <div id="characters-list"></div>
+    <hr>
+    <h2>متجر البكجات</h2>
+    <button onclick="openLootbox()">فتح بكج (احتمال ظهور ويليام أفتون 2%)</button>
+    <button onclick="showScreen('main-menu')">رجوع</button>
+  </div>
+
+  <!-- 4. الإعدادات وشفرة الأدمن -->
+  <div id="settings-screen" class="screen">
+    <h2>إعدادات اللعبة</h2>
+    <button onclick="toggleSound()">تفعيل / تعطيل الصوت</button>
+    
+    <!-- زر إعادة الضبط المخفي التفعيل -->
+    <button class="danger" onclick="handleResetClick()">إعادة ضبط البيانات</button>
+    
+    <!-- حقل كلمة سر الأدمن المخفي -->
+    <div id="admin-pass-field" style="display: none; margin-top: 15px;">
+      <input type="password" id="admin-code-input" placeholder="أدخل الرمز السري للأدمن">
+      <button onclick="verifyAdminCode()">تفعيل صيانة الأدمن</button>
+    </div>
+
+    <!-- لوحة التحكم للأدمن -->
+    <div id="admin-panel" class="admin-panel" style="display: none;">
+      <h3>★ لوحة صلاحيات الأدمن ★</h3>
+      <p>تم تفعيل وضع الأدمن بنجاح!</p>
+      <label>
+        <input type="checkbox" id="force-killer-check"> فرض دور القاتل (ويليام أفتون) للجولة القادمة
+      </label>
+      <button class="afton" onclick="unlockAftonAdmin()">تنسيق وإضافة ويليام أفتون للمخزن فوراً</button>
+    </div>
+
+    <button onclick="showScreen('main-menu')">رجوع</button>
+  </div>
+
+  <!-- 5. إنشاء وانضمام الرومات -->
+  <div id="lobby-screen" class="screen">
+    <h2>إنشاء روم جديدة</h2>
+    <input type="text" id="room-name" placeholder="اسم الروم">
+    <select id="room-type">
+      <option value="chat">محادثة كتابية (Chat)</option>
+      <option value="voice">محادثة صوتية (Voice Room)</option>
+    </select>
+    <button onclick="createRoom()">إنشاء غرفة</button>
+    <hr>
+    <h2>الرومات المتاحة</h2>
+    <div id="rooms-list">
+      <p style="text-align: center;">لا توجد رومات متاحة حالياً. أنشئ روم جديدة!</p>
+    </div>
+    <button onclick="showScreen('main-menu')">رجوع</button>
+  </div>
+
+  <!-- 6. غرفة الانتظار واللعب (Game Room) -->
+  <div id="game-room" class="screen">
+    <h2 id="current-room-title">غرفة اللعب</h2>
+    <p>نوع الروم: <span id="current-room-type"></span></p>
+
+    <h3>اللاعبين المُنضمين (<span id="player-count">1</span>/8) - <small style="color:var(--danger-color)">يلزم 4 لاعبين على الأقل للبدء</small></h3>
+    <div id="players-container" class="player-list"></div>
+
+    <button id="add-fake-player-btn" onclick="addPlayerSim()">إضافة لاعب حقيقي (محاكاة شبكة)</button>
+    <button id="start-game-btn" onclick="startGame()" style="display: none;">بدء اللعبة الان</button>
+    
+    <hr>
+    <!-- منطقة ساحة اللعب -->
+    <div id="game-play-area" style="display: none;">
+      <h3>دورك في هذه الجولة: <span id="my-role" style="color: var(--accent-color);"></span></h3>
+      
+      <div class="chat-box" id="game-chat"></div>
+
+      <!-- قدرات الشخصية -->
+      <div id="abilities-panel">
+        <h4>قدرات الشخصية الخاصة (تستخدم مرة واحدة فقط):</h4>
+        <div id="ability-buttons"></div>
+      </div>
+    </div>
+
+    <button class="danger" onclick="leaveRoom()">مغادرة الغرفة</button>
+  </div>
+
+</div>
+
+<script>
+  // --- حالة التطبيق والبيانات ---
+  let currentUser = null;
+  let resetClickCount = 0;
+  let isAdmin = false;
+  
+  // قاعدة بيانات الشخصيات
+  const CHARACTERS = {
+    freddy: { id: 'freddy', name: 'فريدي (Freddy)', rare: 'عادي', unlocked: true, ability: 'قيادة الفريق (كشف هويات القتلى)' },
+    bonnie: { id: 'bonnie', name: 'بوني (Bonnie)', rare: 'نادر', unlocked: false, ability: 'التجسس والإصلاح (حماية لاعب لليلة واحدة)' },
+    chica: { id: 'chica', name: 'تشيكا (Chica)', rare: 'نادر', unlocked: false, ability: 'الطبخ والتأثير (منع لاعب من التصويت)' },
+    foxy: { id: 'foxy', name: 'فوكسي (Foxy)', rare: 'نادر', unlocked: false, ability: 'الهجوم السريع (كشف دور لاعب محدد)' },
+    afton: { id: 'afton', name: 'ويليام أفتون (William Afton)', rare: 'فائق الندرة', unlocked: false, isKiller: true }
+  };
+
+  let selectedCharacter = 'freddy';
+  let abilityUsed = false;
+  let currentRoom = null;
+  let roomPlayers = [];
+
+  // --- إدارة الشاشات ---
+  function showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+    if(screenId === 'inventory-screen') renderInventory();
+  }
+
+  // --- نظام الحسابات ---
+  function login() {
+    const user = document.getElementById('username').value.trim();
+    if(!user) return alert('يرجى إدخال اسم المستخدم');
+    currentUser = { name: user, level: 1, inventory: ['freddy'] };
+    
+    // استرجاع البيانات المحفوظة إن وجدت
+    const saved = localStorage.getItem('fnaf_user_' + user);
+    if(saved) currentUser = JSON.parse(saved);
+    else localStorage.setItem('fnaf_user_' + user, JSON.stringify(currentUser));
+
+    document.getElementById('user-display').innerText = currentUser.name;
+    document.getElementById('user-level').innerText = currentUser.level;
+    showScreen('main-menu');
+  }
+
+  function register() {
+    login(); // محاكاة بسيطة للإنشاء والتدشين
+  }
+
+  // --- نظام فتح البكجات والشخصيات ---
+  function renderInventory() {
+    const container = document.getElementById('characters-list');
+    container.innerHTML = '';
+
+    Object.keys(CHARACTERS).forEach(key => {
+      const char = CHARACTERS[key];
+      const isUnlocked = currentUser.inventory.includes(key);
+      const isSel = selectedCharacter === key;
+
+      const card = document.createElement('div');
+      card.className = `character-card ${isSel ? 'selected' : ''}`;
+      card.innerHTML = `
+        <div>
+          <strong>${char.name}</strong> 
+          <span class="badge ${char.rare === 'فائق الندرة' ? 'exotic' : 'rare'}">${char.rare}</span>
+          <br><small>${char.ability || 'قدرات القاتل الخاصة (3 قدرات)'}</small>
+        </div>
+        <div>
+          ${isUnlocked ? 
+            `<button onclick="selectChar('${key}')">${isSel ? 'محدد' : 'اختيار'}</button>` : 
+            `<span style="color:#888;">مغلق (ليفيل/بكج)</span>`}
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  function selectChar(key) {
+    selectedCharacter = key;
+    renderInventory();
+  }
+
+  function openLootbox() {
+    const rand = Math.random() * 100;
+    let unlockedKey = '';
+
+    if(rand < 2) unlockedKey = 'afton'; // 2% ندرة
+    else if(rand < 30) unlockedKey = 'foxy';
+    else if(rand < 60) unlockedKey = 'chica';
+    else unlockedKey = 'bonnie';
+
+    if(!currentUser.inventory.includes(unlockedKey)) {
+      currentUser.inventory.push(unlockedKey);
+      localStorage.setItem('fnaf_user_' + currentUser.name, JSON.stringify(currentUser));
+      alert(`مبروك! حصلت على الشخصية: ${CHARACTERS[unlockedKey].name}`);
+    } else {
+      alert(`ظهرت لك شخصية مكررة (${CHARACTERS[unlockedKey].name}). تم تحويلها لنقاط خبرة!`);
+    }
+    renderInventory();
+  }
+
+  // --- زر إعادة الضبط وشفرة الأدمن السرية ---
+  function handleResetClick() {
+    resetClickCount++;
+    if(resetClickCount >= 7) {
+      document.getElementById('admin-pass-field').style.display = 'block';
+      alert('تم فتح حقل الشفرة السرية للأدمن!');
+      resetClickCount = 0;
+    }
+  }
+
+  function verifyAdminCode() {
+    const code = document.getElementById('admin-code-input').value;
+    if(code === 'yasser3my') {
+      isAdmin = true;
+      document.getElementById('admin-panel').style.display = 'block';
+      alert('تم تفعيل صلاحيات الأدمن بنجاح!');
+    } else {
+      alert('الرمز السري غير صحيح!');
+    }
+  }
+
+  function unlockAftonAdmin() {
+    if(!isAdmin) return;
+    if(!currentUser.inventory.includes('afton')) {
+      currentUser.inventory.push('afton');
+      localStorage.setItem('fnaf_user_' + currentUser.name, JSON.stringify(currentUser));
+      alert('تم إضافة ويليام أفتون لحسابك بنجاح!');
+    } else {
+      alert('ويليام أفتون موجود بحسابك بالفعل.');
+    }
+  }
+
+  function toggleSound() {
+    alert('تم تغيير إعدادات الصوت.');
+  }
+
+  // --- إدارة الرومات واللعب الجماعي ---
+  function createRoom() {
+    const name = document.getElementById('room-name').value.trim() || 'روم الرعب';
+    const type = document.getElementById('room-type').value;
+
+    currentRoom = { name, type };
+    roomPlayers = [{ name: currentUser.name, char: selectedCharacter }];
+
+    document.getElementById('current-room-title').innerText = name;
+    document.getElementById('current-room-type').innerText = type === 'chat' ? 'محادثة كتابية' : 'محادثة صوتية';
+
+    updatePlayersUI();
+    showScreen('game-room');
+  }
+
+  function addPlayerSim() {
+    if(roomPlayers.length >= 8) return alert('الروم ممتلئة!');
+    const names = ['فهد', 'أصيل', 'تيم', 'سارة', 'خالد', 'عمر'];
+    const pName = names[roomPlayers.length - 1] || `لاعب ${roomPlayers.length + 1}`;
+    roomPlayers.push({ name: pName, char: 'freddy' });
+    updatePlayersUI();
+  }
+
+  function updatePlayersUI() {
+    document.getElementById('player-count').innerText = roomPlayers.length;
+    const container = document.getElementById('players-container');
+    container.innerHTML = '';
+
+    roomPlayers.forEach((p, idx) => {
+      container.innerHTML += `<div class="player-item">👤 ${p.name}</div>`;
+    });
+
+    // شرط وجود 4 لاعبين على الأقل لبدء القيم
+    const startBtn = document.getElementById('start-game-btn');
+    if(roomPlayers.length >= 4) {
+      startBtn.style.display = 'block';
+    } else {
+      startBtn.style.display = 'none';
+    }
+  }
+
+  function leaveRoom() {
+    currentRoom = null;
+    roomPlayers = [];
+    document.getElementById('game-play-area').style.display = 'none';
+    showScreen('lobby-screen');
+  }
+
+  // --- بدء اللعبة وتوزيع الأدوار ---
+  function startGame() {
+    if(roomPlayers.length < 4) {
+      return alert('لا يمكن بدء اللعبة! يجب انضمام 4 لاعبين حقيقيين على الأقل.');
+    }
+
+    document.getElementById('add-fake-player-btn').style.display = 'none';
+    document.getElementById('start-game-btn').style.display = 'none';
+    document.getElementById('game-play-area').style.display = 'block';
+
+    let myRole = CHARACTERS[selectedCharacter].name;
+
+    // خيار الأدمن لفرض دور القاتل
+    const forceKiller = document.getElementById('force-killer-check').checked;
+    if(isAdmin && forceKiller) {
+      myRole = CHARACTERS['afton'].name;
+    }
+
+    document.getElementById('my-role').innerText = myRole;
+    abilityUsed = false;
+
+    setupAbilities(myRole.includes('William Afton'));
+    logChat('النظام: بدأت اللعبة! حلول الليل.. حدد تكتيكاتك بدقة.');
+  }
+
+  function setupAbilities(isAfton) {
+    const container = document.getElementById('ability-buttons');
+    container.innerHTML = '';
+
+    if(isAfton) {
+      container.innerHTML = `
+        <button onclick="useAftonSkill(1)">1. تزوير رسالة (Fake Message)</button>
+        <button onclick="useAftonSkill(2)">2. التحكم بالموتى (Necromancer)</button>
+        <button onclick="useAftonSkill(3)">3. القتل الخفي (Ghost Kill)</button>
+      `;
+    } else {
+      container.innerHTML = `
+        <button onclick="useStandardSkill()">استخدام قدرة الشخصية الخاصة</button>
+      `;
+    }
+  }
+
+  function useStandardSkill() {
+    if(abilityUsed) return alert('لقد استخدمت قدرتك الخاصة بالفعل في هذه الجولة!');
+    abilityUsed = true;
+    logChat(`[قدرة]: قام ${currentUser.name} بتفعيل قدرة شخصيته الخاصّة!`);
+    alert('تم استخدام القدرة بنجاح!');
+  }
+
+  // --- قدرات ويليام أفتون الثلاثة ---
+  function useAftonSkill(skillNum) {
+    if(abilityUsed) return alert('استخدمت قدراتك المتاحة لهذه الجولة!');
+
+    if(skillNum === 1) {
+      const target = prompt('أدخل اسم اللاعب المراد تزوير رسالة باسمه:');
+      const msg = prompt('أدخل النص المزوار:');
+      if(target && msg) {
+        logChat(`💬 (${target}): ${msg}`);
+        abilityUsed = true;
+      }
+    } else if(skillNum === 2) {
+      const deadPlayer = prompt('أدخل اسم اللاعب الميت لتحويله إلى أنيماترونكس مساعد:');
+      if(deadPlayer) {
+        logChat(`⚠️ [ويليام أفتون]: قام بإعادة تحريك ${deadPlayer} ليصبح أنيماترونكس خادم له!`);
+        abilityUsed = true;
+      }
+    } else if(skillNum === 3) {
+      const target = prompt('اختر ضحيتك للقتل الخفي:');
+      if(target) {
+        logChat(`☠️ تم تنفيذ القتل الخفي على اللاعب (${target}) بنجاح وبدون أي أثر!`);
+        abilityUsed = true;
+      }
+    }
+  }
+
+  function logChat(msg) {
+    const box = document.getElementById('game-chat');
+    box.innerHTML += `<div>${msg}</div>`;
+    box.scrollTop = box.scrollHeight;
+  }
+</script>
+</body>
+</html>
